@@ -1,25 +1,42 @@
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ApolloServerPluginLandingPageLocalDefault } from 'apollo-server-core';
-
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
-import { TutorialsModule } from './tutorials/tutorials.module';
-import { TutorialsResolver } from './tutorials/tutorials.resolver';
-import { TutorialsService } from './tutorials/tutorials.service';
+import {
+  ApolloServerPluginLandingPageLocalDefault,
+  ApolloServerPluginLandingPageProductionDefault
+} from 'apollo-server-core';
 import { join } from 'path';
+
+import { FirestoreModule } from './firestore/firestore.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    FirestoreModule.forRoot({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        keyFilename: configService.get<string>('SA_KEY'),
+      }),
+      inject: [ConfigService],
+    }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       playground: false,
       debug: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault()],
+      plugins: [
+        process.env.NODE_ENV === 'production'
+          ? ApolloServerPluginLandingPageProductionDefault()
+          : ApolloServerPluginLandingPageLocalDefault(),
+      ],
       autoSchemaFile: join(process.cwd(), 'dist/schema.gql'),
     }),
-    TutorialsModule,
+    UsersModule,
   ],
   controllers: [],
-  providers: [TutorialsService, TutorialsResolver],
+  providers: [],
 })
 export class AppModule {}

@@ -1,5 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+
+import { Test, TestingModule } from '@nestjs/testing';
+
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 
@@ -16,9 +18,22 @@ describe('AppController (e2e)', () => {
   });
 
   it('/ (GET)', () => {
+    return request(app.getHttpServer()).get('/').expect(404);
+  });
+
+  it('/graphql (POST)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .post('/graphql')
+      .send({
+        query: `{ users { username } }`,
+      })
       .expect(200)
-      .expect('Hello World!');
+      .expect((res) => {
+        expect(res.body.data.users.length).toEqual(10);
+      });
+  });
+
+  afterAll(async () => {
+    await app.close();
   });
 });
